@@ -1,0 +1,9 @@
+# Internal admin console: always revalidate static assets so UI changes
+# show up immediately after a manager rollout (no heuristic browser caching).
+spring:
+  web:
+    resources:
+      cache:
+        cachecontrol:
+          no-cache: true
+          must-revalidate: true

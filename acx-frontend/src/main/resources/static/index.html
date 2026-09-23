@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACX Sandbox 控制台</title>
+  <link rel="stylesheet" href="css/style.css?v=5">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◆</span>
+    <div>
+      <h1>ACX Sandbox 控制台</h1>
+      <p class="subtitle">预热池管理 · 应用快速启动 · 动态挂载 · In-Place 原地调整</p>
+    </div>
+  </div>
+  <div class="top-status">
+    <span class="badge" id="nsBadge">ns: --</span>
+    <span class="badge" id="backendBadge">后端: 检测中…</span>
+    <button class="btn ghost" id="refreshBtn" title="手动刷新">⟳ 刷新</button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- 左侧导航菜单 -->
+  <aside class="sidebar">
+    <div class="side-title">管理</div>
+    <nav>
+      <button class="nav-item active" id="navPools" title="常驻的已就绪沙箱池，应用启动秒级领取">
+        <span class="dot" style="background:var(--primary)"></span>
+        <span class="nav-label">预热池</span>
+        <span class="nav-count" id="navPoolCount">0</span>
+      </button>
+      <button class="nav-item" id="navSandboxes" title="从预热池领取后启动的应用 Pod">
+        <span class="dot" style="background:var(--green)"></span>
+        <span class="nav-label">应用沙箱</span>
+        <span class="nav-count" id="navSbxCount">0</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- 主内容区：单视图切换 -->
+  <main class="content">
+    <!-- Pools 视图 -->
+    <section class="card" id="poolsView">
+      <div class="card-head">
+        <h2>预热池 <span class="count" id="poolCount">0</span></h2>
+        <button class="btn primary" id="createPoolBtn">＋ 新建预热池</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>期望</th>
+              <th>可用</th>
+              <th>创建中</th>
+              <th>已启动</th>
+              <th>镜像</th>
+              <th class="th-ops">操作</th>
+            </tr>
+          </thead>
+          <tbody id="poolRows"></tbody>
+        </table>
+        <div class="empty" id="poolEmpty" hidden>暂无预热池。<br>点击右上角「＋ 新建预热池」，创建一个常驻的已就绪沙箱池，应用启动即可秒级领取。</div>
+      </div>
+    </section>
+
+    <!-- Sandboxes 视图 -->
+    <section class="card" id="sandboxesView" hidden>
+      <div class="card-head">
+        <h2>应用沙箱 <span class="count" id="sbxCount">0</span></h2>
+        <div class="legend">
+          <span class="chip creating">creating</span>
+          <span class="chip available">available</span>
+          <span class="chip running">running</span>
+          <span class="chip paused">paused</span>
+          <span class="chip dead">dead</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>沙箱 ID</th>
+              <th>池</th>
+              <th>状态</th>
+              <th>镜像</th>
+              <th>Pod IP</th>
+              <th>挂载</th>
+              <th class="th-ops">操作</th>
+            </tr>
+          </thead>
+          <tbody id="sbxRows"></tbody>
+        </table>
+        <div class="empty" id="sbxEmpty" hidden>还没有应用沙箱。<br>在「预热池」点击「启动」，即可从池中快速领取沙箱并启动应用 Pod。</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<footer class="foot">
+  <span>状态: <b id="autoState">–</b></span>
+  <span id="lastSync">–</span>
+</footer>
+
+<!-- Modal root -->
+<div class="modal-mask" id="modalMask" hidden>
+  <div class="modal" id="modalBox"></div>
+</div>
+<div class="toast-area" id="toastArea"></div>
+
+<script src="js/app.js?v=7"></script>
+</body>
+</html>

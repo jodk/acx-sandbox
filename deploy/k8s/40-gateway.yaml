@@ -1,0 +1,142 @@
+# acx-gateway (sandbox-gateway) — 路由面
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sandbox-gateway
+  namespace: sandbox-system
+  labels:
+    app.kubernetes.io/name: acx-sandbox
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sandbox-gateway
+  labels:
+    app.kubernetes.io/name: acx-sandbox
+rules:
+  - apiGroups: ["agents.kruise.io"]
+    resources: ["sandboxes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["agents.kruise.io"]
+    resources: ["sandboxes/status"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sandbox-gateway
+  labels:
+    app.kubernetes.io/name: acx-sandbox
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sandbox-gateway
+subjects:
+  - kind: ServiceAccount
+    name: sandbox-gateway
+    namespace: sandbox-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox-gateway
+  namespace: sandbox-system
+  labels:
+    component: sandbox-gateway
+    app.kubernetes.io/name: acx-sandbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: sandbox-gateway
+      app.kubernetes.io/name: acx-sandbox
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  template:
+    metadata:
+      labels:
+        component: sandbox-gateway
+        app.kubernetes.io/name: acx-sandbox
+    spec:
+      serviceAccountName: sandbox-gateway
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: gateway
+          image: image.ac.com:5000/acx/acx-sandbox-gateway:latest
+          imagePullPolicy: Always
+          command:
+            - java
+            - -jar
+            - /app/app.jar
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+      affinity:
+        # 固定调度到可访问 apiserver 的节点组（10.0.33.x 的 Pod 网络与控制面隔离）
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - 10.0.31.15
+                      - 10.0.31.23
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: acx-sandbox
+                topologyKey: kubernetes.io/hostname
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sandbox-gateway
+  namespace: sandbox-system
+  labels:
+    app.kubernetes.io/name: acx-sandbox
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    component: sandbox-gateway
+    app.kubernetes.io/name: acx-sandbox

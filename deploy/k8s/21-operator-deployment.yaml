@@ -1,0 +1,58 @@
+# acx-operator (sandbox-controller) deployment — JOSDK reconcilers
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sandbox-controller
+  namespace: sandbox-system
+  labels:
+    control-plane: sandbox-controller
+    app.kubernetes.io/name: acx-sandbox
+spec:
+  selector:
+    matchLabels:
+      control-plane: sandbox-controller
+      app.kubernetes.io/name: acx-sandbox
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: sandbox-controller
+        app.kubernetes.io/name: acx-sandbox
+    spec:
+      serviceAccountName: controller-manager
+      imagePullSecrets:
+        - name: regcred
+      # 仅调度到能访问 API Server 的网络节点（10.0.33.x 节点 Pod 网络与
+      # 控制面网络隔离，无法连通 apiserver/集群内服务，详见 docs/deploy-notes）。
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - 10.0.31.15
+                      - 10.0.31.23
+      containers:
+        - name: manager
+          image: image.ac.com:5000/acx/acx-sandbox-controller:latest
+          imagePullPolicy: Always
+          command:
+            - java
+            - -jar
+            - /app/app.jar
+          env:
+            # 注入 Sandbox Pod 的 agent-runtime Sidecar 镜像
+            - name: AGENT_RUNTIME_IMAGE
+              value: image.ac.com:5000/acx/acx-agent-runtime:latest
+          resources:
+            limits:
+              cpu: 500m
+              memory: 768Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      terminationGracePeriodSeconds: 10
